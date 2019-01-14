@@ -1,3 +1,9 @@
-Alice and Bob will in this example generate a key and use this to send a message. All the communication will pass through Eve who will try to intercept the message. Alice and Bob don't know distribute a key securely using QKD, so Alice just generates a key and sends this to Bob by encoding the key in a qubit. Alice encodes the key by applying an Pauli-X operation depending on the value of the key.
+USAGE (assuming default simulaqron settings and server running):
 
-Can you help Alice and Bob with a better scheme?
+sh run_example.sh {n}
+
+n = int, number of qubits to be sent
+Alice will send n Qubits in a randomly chosen BB84 state (using its classical value 0/1 as key)
+Bob will choose a random basis for each qubit and measure it.
+
+The classical part was removed because it's not relevant for this exercise

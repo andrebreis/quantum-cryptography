@@ -84,26 +84,12 @@ def main():
             if chosen_basis == 1:
                 q.H()
 
-                # Send qubit to Bob (via Eve)
-            print('sending qubit {}...'.format(str(i)))
+            # Send qubit to Bob (via Eve)
             Alice.sendQubit(q, "Eve")
-            print('sent!')
-            # q.release()
-
-            # Encode and send a classical message m to Bob
-            # m = 1
-            # enc = (m + k) % 2
-            # Alice.sendClassical("Bob", enc)
-
-        # print("\nAlice basis={}".format(basis_string))
-        # print("Alice send the key k={} to Bob".format(bitstring))
 
         Alice.sendClassical("Bob", basis_list)
         bob_basis = Alice.recvClassical()
         bob_basis = list(bob_basis)
-        # print('\n ========================= \n')
-        # print(basis_list)
-        # print(bob_basis)
         for i in range(0, len(bob_basis)):
             if bob_basis[i] != basis_list[i]:
                 raw_key[i] = 'X'
@@ -111,13 +97,12 @@ def main():
 
         sifted_key = list(map(lambda k: int(k), (filter(lambda k: k != 'X', raw_key))))
         sifted_basis = list(filter(lambda k: k != 'X', basis_list))
-        # print('\n' + ''.join(sifted_key))
 
         print("Alice waiting for classical")
         bob_key = list(Alice.recvClassical())
+        Alice.sendClassical("Bob", sifted_key)
         print('received!')
-        # print(len(sifted_key))
-        # print(len(bob_key))
+
         print('A BAS = {}'.format(sifted_basis))
         print('A KEY = {}'.format(sifted_key))
         print('B KEY = {}'.format(bob_key))
@@ -136,20 +121,14 @@ def main():
                 if int(sifted_key[i]) != bob_key[i]:
                     x_basis_error += 1.0
 
+        if z_count == 0:
+            z_count = 1
+        if x_count == 0:
+            x_count = 1
+
         print("\n Standard Basis Error: {}\n Hadamard Basis Error: {}\n".format(z_basis_error / z_count,
                                                                                 x_basis_error / x_count))
 
-        # seed = generate_seed(len(sifted_key))
-        # key = 0
-        # for i in range(0, len(seed)):
-        #     key = (key + (int(sifted_key[i]) * seed[i])) % 2
-        # print(key)
-
-        # Alice.sendClassical("Eve", seed)
-
-        # Alice.sendClassical("Bob", key)
-
-    # print(bob_basis)
 
 ##################################################################################################
 main()

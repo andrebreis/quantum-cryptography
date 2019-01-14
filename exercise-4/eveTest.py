@@ -72,9 +72,6 @@ def main():
 
         print('E BAS = {}'.format(basis_list))
 
-        # seed = list(Eve.recvClassical())
-        # Eve.sendClassical("Bob", seed)
-
 
 ##################################################################################################
 main()

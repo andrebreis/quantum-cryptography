@@ -26,6 +26,7 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import time
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection, qubit
 import argparse
@@ -84,43 +85,33 @@ def main():
             if chosen_basis == 1:
                 q.H()
 
-                # Send qubit to Bob (via Eve)
+            # Send qubit to Bob (via Eve)
             Alice.sendQubit(q, "Eve")
-
-            # Encode and send a classical message m to Bob
-            # m = 1
-            # enc = (m + k) % 2
-            # Alice.sendClassical("Bob", enc)
-
-        # print("\nAlice basis={}".format(basis_string))
-        # print("Alice send the key k={} to Bob".format(bitstring))
 
         Alice.sendClassical("Bob", basis_list)
         bob_basis = Alice.recvClassical()
         bob_basis = list(bob_basis)
-        # print('\n ========================= \n')
-        # print(basis_list)
-        # print(bob_basis)
-        for i in range(0,len(bob_basis)):
+        for i in range(0, len(bob_basis)):
             if bob_basis[i] != basis_list[i]:
                 raw_key[i] = 'X'
                 basis_list[i] = 'X'
 
         sifted_key = list(filter(lambda k: k != 'X', raw_key))
-        sifted_basis = list(filter(lambda k: k != 'X', basis_list))
-        print('\n' + ''.join(sifted_key))
+        # sifted_basis = list(filter(lambda k: k != 'X', basis_list))
+        print('\nAlice Sifted Key:' + ''.join(sifted_key))
 
         seed = generate_seed(len(sifted_key))
+        Alice.sendClassical("Bob", seed)
         key = 0
         for i in range(0, len(seed)):
             key = (key + (int(sifted_key[i]) * seed[i])) % 2
-        print(key)
+        print("Alice extracted key={}".format(key))
 
-        Alice.sendClassical("Eve", seed)
-
-        # Alice.sendClassical("Bob", key)
-
-    # print(bob_basis)
+        m = 1
+        c = (m + key) % 2
+        time.sleep(1)
+        Alice.sendClassical("Bob", c)
+        print("Alice sent m={} encrypted to c={}".format(m, c))
 
 ##################################################################################################
 main()

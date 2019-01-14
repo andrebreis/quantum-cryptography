@@ -70,36 +70,28 @@ def main():
             k = q.measure()
             raw_key.append(str(k))
 
-            # Receive classical encoded message from Alice
-            # enc = Bob.recvClassical()[0]
-            # Calculate message
-            # m = (enc + k) % 2
-
-        # print("\nBob basis={}".format(basis_string))
-        # print("Bob retrieved the key k={} from Alice.".format(bitstring))
         alice_basis = Bob.recvClassical()
         Bob.sendClassical("Alice", basis_list)
-        # print('\n ========================= \n')
         alice_basis = list(alice_basis)
-        # print(alice_basis)
-        # print(basis_list)
         for i in range(0, len(alice_basis)):
             if alice_basis[i] != basis_list[i]:
                 raw_key[i] = 'X'
 
         sifted_key = list(filter(lambda k: k != 'X', raw_key))
-        print('\n'+''.join(sifted_key))
+        print('\nBob Sifted Key:' + ''.join(sifted_key))
 
         seed = list(Bob.recvClassical())
         key = 0
         for i in range(0, len(seed)):
             key = (key + (int(sifted_key[i]) * seed[i])) % 2
-        print(key)
+        print("Bob extracted key={}".format(key))
+
+        c = list(Bob.recvClassical())[0]
+        m = (c + key) % 2
+
+        print("Bob received m={} that was encrypted as c={}".format(m, c))
 
 
-
-        # print('\n ========================= \n')
-        # print('\n Alice basis={}'.format(alice_basis))
 
 
 ##################################################################################################

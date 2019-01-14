@@ -61,8 +61,8 @@ def main():
             # Forward the qubit to Bob
             Eve.sendQubit(q, "Bob")
 
-        seed = list(Eve.recvClassical())
-        Eve.sendClassical("Bob", seed)
+        # seed = list(Eve.recvClassical())
+        # Eve.sendClassical("Bob", seed)
 
 
 ##################################################################################################

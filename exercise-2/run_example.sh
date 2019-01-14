@@ -7,4 +7,4 @@ fi
 
 python aliceTest.py $1 &
 python bobTest.py $1 &
-python eveTest.py $1 &
+python eveTest.py $1

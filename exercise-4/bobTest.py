@@ -71,46 +71,43 @@ def main():
             k = q.measure()
             raw_key.append(str(k))
 
-            # Receive classical encoded message from Alice
-            # enc = Bob.recvClassical()[0]
-            # Calculate message
-            # m = (enc + k) % 2
-
-        # print("\nBob basis={}".format(basis_string))
-        # print("Bob retrieved the key k={} from Alice.".format(bitstring))
         alice_basis = Bob.recvClassical()
         Bob.sendClassical("Alice", basis_list)
-        # print('\n ========================= \n')
         alice_basis = list(alice_basis)
-        # print(alice_basis)
-        # print(basis_list)
         for i in range(0, len(alice_basis)):
             if alice_basis[i] != basis_list[i]:
                 raw_key[i] = 'X'
+                basis_list[i] = 'X'
 
-        sifted_key = list(filter(lambda k: k != 'X', raw_key))
-        # print('\n' + ''.join(sifted_key))
-
-        for i in range(0, len(sifted_key)):
-            sifted_key[i] = int(sifted_key[i])
-
-        # time.sleep(1)
-        # print(type(sifted_key))
+        sifted_key = list(map(lambda k: int(k), (filter(lambda k: k != 'X', raw_key))))
+        sifted_basis = list(filter(lambda k: k != 'X', basis_list))
 
         print('bob sending classical...')
         Bob.sendClassical("Alice", sifted_key)
+        alice_key = list(Bob.recvClassical())
         print('sent!')
 
-        # seed = list(Bob.recvClassical())
-        # key = 0
-        # for i in range(0, len(seed)):
-        #     key = (key + (int(sifted_key[i]) * seed[i])) % 2
-        # print(key)
+        z_basis_error = 0.0
+        x_basis_error = 0.0
+        z_count = 0.0
+        x_count = 0.0
+        for i in range(0, len(sifted_basis)):
+            if int(sifted_basis[i]) == 0:
+                z_count += 1.0
+                if int(sifted_key[i]) != alice_key[i]:
+                    z_basis_error += 1.0
+            else:
+                x_count += 1.0
+                if int(sifted_key[i]) != alice_key[i]:
+                    x_basis_error += 1.0
 
+        if z_count == 0:
+            z_count = 1
+        if x_count == 0:
+            x_count = 1
 
-
-        # print('\n ========================= \n')
-        # print('\n Alice basis={}'.format(alice_basis))
+        print("\n Standard Basis Error: {}\n Hadamard Basis Error: {}\n".format(z_basis_error / z_count,
+                                                                                x_basis_error / x_count))
 
 
 ##################################################################################################

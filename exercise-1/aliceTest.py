@@ -63,11 +63,12 @@ def main():
         Alice.sendQubit(q, "Eve")
 
         # Encode and send a classical message m to Bob
-        # m = 1
-        # enc = (m + k) % 2
-        # Alice.sendClassical("Bob", enc)
+        m = 1
+        enc = (m + k) % 2
+        Alice.sendClassical("Bob", enc)
 
         print("\nAlice basis={}".format(BASIS[chosen_basis]))
+        print("Alice key={}".format(k))
         print("Alice send the message m={} to Bob".format(m))
 
 

@@ -61,6 +61,7 @@ def main():
         m = (enc + k) % 2
 
         print("\nBob basis={}".format(BASIS[chosen_basis]))
+        print("Bob key={}".format(k))
         print("Bob retrieved the message m={} from Alice.".format(m))
 
 

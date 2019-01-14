@@ -75,13 +75,9 @@ def main():
             if chosen_basis == 1:
                 q.H()
 
-                # Send qubit to Bob (via Eve)
+            # Send qubit to Bob (via Eve)
             Alice.sendQubit(q, "Eve")
 
-            # Encode and send a classical message m to Bob
-            # m = 1
-            # enc = (m + k) % 2
-            # Alice.sendClassical("Bob", enc)
 
         print("\nAlice basis={}".format(basis_string))
         print("Alice send the key k={} to Bob".format(bitstring))

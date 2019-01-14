@@ -7,4 +7,4 @@ fi
 
 python aliceTest.py &
 python bobTest.py &
-python eveTest.py &
+python eveTest.py

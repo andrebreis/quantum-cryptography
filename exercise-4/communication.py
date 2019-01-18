@@ -9,8 +9,9 @@ def send_message(sender, receiver_name, msg):
             s.connect((socket_info.hostname, socket_info.port))
             s.send(msg)
             break
-        except ConnectionRefusedError:
+        except Exception:
             continue
+    ack = s.recv(32)
     s.close()
 
 
@@ -22,6 +23,7 @@ def receive_message(receiver):
     s.listen(1)
     c, addr = s.accept()
     msg = c.recv(1024) #.decode('utf-8')
+    c.send('ACK'.encode('utf-8'))
     c.close()
     s.close()
     return msg

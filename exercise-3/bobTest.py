@@ -28,6 +28,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import argparse
 import random
+from communication import send_message, receive_message
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection
 
@@ -54,6 +55,7 @@ def main():
 
     # Initialize the connection
     with CQCConnection("Bob") as Bob:
+        Bob.closeClassicalServer()
 
         for i in range(0, n):
 
@@ -70,9 +72,8 @@ def main():
             k = q.measure()
             raw_key.append(str(k))
 
-        alice_basis = Bob.recvClassical()
-        Bob.sendClassical("Alice", basis_list)
-        alice_basis = list(alice_basis)
+        alice_basis = list(receive_message(Bob))
+        send_message(Bob, "Alice", bytes(basis_list))
         for i in range(0, len(alice_basis)):
             if alice_basis[i] != basis_list[i]:
                 raw_key[i] = 'X'
@@ -80,18 +81,15 @@ def main():
         sifted_key = list(filter(lambda k: k != 'X', raw_key))
         print('\nBob Sifted Key:' + ''.join(sifted_key))
 
-        seed = list(Bob.recvClassical())
+        seed = list(receive_message(Bob))
         key = 0
         for i in range(0, len(seed)):
             key = (key + (int(sifted_key[i]) * seed[i])) % 2
         print("Bob extracted key={}".format(key))
 
-        c = list(Bob.recvClassical())[0]
+        c = receive_message(Bob)[0]
         m = (c + key) % 2
-
         print("Bob received m={} that was encrypted as c={}".format(m, c))
-
-
 
 
 ##################################################################################################

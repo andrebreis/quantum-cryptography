@@ -30,6 +30,7 @@ import time
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection, qubit
 import argparse
+from communication import send_message, receive_message
 
 import random
 
@@ -65,9 +66,9 @@ def main():
 
     # Initialize the connection
     with CQCConnection("Alice") as Alice:
+        Alice.closeClassicalServer()
 
         for i in range(0, n):
-
             # Generate a key
             k = random.randint(0, 1)
             raw_key.append(str(k))
@@ -88,20 +89,18 @@ def main():
             # Send qubit to Bob (via Eve)
             Alice.sendQubit(q, "Eve")
 
-        Alice.sendClassical("Bob", basis_list)
-        bob_basis = Alice.recvClassical()
-        bob_basis = list(bob_basis)
+        send_message(Alice, "Bob", bytes(basis_list))
+        bob_basis = list(receive_message(Alice))
         for i in range(0, len(bob_basis)):
             if bob_basis[i] != basis_list[i]:
                 raw_key[i] = 'X'
                 basis_list[i] = 'X'
 
         sifted_key = list(filter(lambda k: k != 'X', raw_key))
-        # sifted_basis = list(filter(lambda k: k != 'X', basis_list))
         print('\nAlice Sifted Key:' + ''.join(sifted_key))
 
         seed = generate_seed(len(sifted_key))
-        Alice.sendClassical("Bob", seed)
+        send_message(Alice, "Bob", bytes(seed))
         key = 0
         for i in range(0, len(seed)):
             key = (key + (int(sifted_key[i]) * seed[i])) % 2
@@ -109,8 +108,7 @@ def main():
 
         m = 1
         c = (m + key) % 2
-        time.sleep(1)
-        Alice.sendClassical("Bob", c)
+        send_message(Alice, "Bob", bytes([c]))
         print("Alice sent m={} encrypted to c={}".format(m, c))
 
 ##################################################################################################

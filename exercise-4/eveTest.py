@@ -70,7 +70,7 @@ def main():
             Eve.sendQubit(q, "Bob")
             # q.release()
 
-        print('E BAS = {}'.format(basis_list))
+        # print('E BAS = {}'.format(basis_list))
 
 
 ##################################################################################################

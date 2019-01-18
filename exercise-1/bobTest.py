@@ -29,6 +29,7 @@
 import random
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection
+from communication import send_message, receive_message
 
 
 #####################################################################################################
@@ -42,6 +43,7 @@ def main():
 
     # Initialize the connection
     with CQCConnection("Bob") as Bob:
+        Bob.closeClassicalServer()
 
         # Receive qubit from Alice (via Eve)
         q = Bob.recvQubit()
@@ -55,7 +57,7 @@ def main():
         k = q.measure()
 
         # Receive classical encoded message from Alice
-        enc = Bob.recvClassical()[0]
+        enc = receive_message(Bob)[0]
 
         # Calculate message
         m = (enc + k) % 2

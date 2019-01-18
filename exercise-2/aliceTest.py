@@ -78,7 +78,6 @@ def main():
             # Send qubit to Bob (via Eve)
             Alice.sendQubit(q, "Eve")
 
-
         print("\nAlice basis={}".format(basis_string))
         print("Alice send the key k={} to Bob".format(bitstring))
 

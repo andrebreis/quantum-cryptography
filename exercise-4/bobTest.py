@@ -29,6 +29,7 @@
 import argparse
 import random
 import time
+from communication import send_message, receive_message
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection
 
@@ -55,6 +56,7 @@ def main():
 
     # Initialize the connection
     with CQCConnection("Bob") as Bob:
+        Bob.closeClassicalServer()
 
         for i in range(0, n):
 
@@ -71,21 +73,18 @@ def main():
             k = q.measure()
             raw_key.append(str(k))
 
-        alice_basis = Bob.recvClassical()
-        Bob.sendClassical("Alice", basis_list)
-        alice_basis = list(alice_basis)
+        alice_basis = list(receive_message(Bob))
+        send_message(Bob, "Alice", bytes(basis_list))
         for i in range(0, len(alice_basis)):
             if alice_basis[i] != basis_list[i]:
                 raw_key[i] = 'X'
                 basis_list[i] = 'X'
 
-        sifted_key = list(map(lambda k: int(k), (filter(lambda k: k != 'X', raw_key))))
-        sifted_basis = list(filter(lambda k: k != 'X', basis_list))
+        sifted_key = list(map(lambda x: int(x), (filter(lambda x: x != 'X', raw_key))))
+        sifted_basis = list(filter(lambda x: x != 'X', basis_list))
 
-        print('bob sending classical...')
-        Bob.sendClassical("Alice", sifted_key)
-        alice_key = list(Bob.recvClassical())
-        print('sent!')
+        send_message(Bob, "Alice", bytes(sifted_key))
+        alice_key = list(receive_message(Bob))
 
         z_basis_error = 0.0
         x_basis_error = 0.0

@@ -28,6 +28,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection, qubit
+from communication import send_message, receive_message
 
 import random
 
@@ -43,6 +44,7 @@ def main():
 
     # Initialize the connection
     with CQCConnection("Alice") as Alice:
+        Alice.closeClassicalServer()
 
         # Generate a key
         k = random.randint(0, 1)
@@ -59,17 +61,17 @@ def main():
         if chosen_basis == 1:
             q.H()
 
-            # Send qubit to Bob (via Eve)
+        # Send qubit to Bob (via Eve)
         Alice.sendQubit(q, "Eve")
 
         # Encode and send a classical message m to Bob
         m = 1
         enc = (m + k) % 2
-        Alice.sendClassical("Bob", enc)
+        send_message(Alice, "Bob", bytes([enc]))
 
         print("\nAlice basis={}".format(BASIS[chosen_basis]))
         print("Alice key={}".format(k))
-        print("Alice send the message m={} to Bob".format(m))
+        print("Alice sent the message m={} to Bob".format(m))
 
 
 ##################################################################################################

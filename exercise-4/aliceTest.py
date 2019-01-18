@@ -28,6 +28,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection, qubit
+from communication import send_message, receive_message
 import argparse
 
 import random
@@ -64,6 +65,7 @@ def main():
 
     # Initialize the connection
     with CQCConnection("Alice") as Alice:
+        Alice.closeClassicalServer()
 
         for i in range(0, n):
 
@@ -87,9 +89,9 @@ def main():
             # Send qubit to Bob (via Eve)
             Alice.sendQubit(q, "Eve")
 
-        Alice.sendClassical("Bob", basis_list)
-        bob_basis = Alice.recvClassical()
-        bob_basis = list(bob_basis)
+        send_message(Alice, "Bob", bytes(basis_list))
+        bob_basis = list(receive_message(Alice))
+
         for i in range(0, len(bob_basis)):
             if bob_basis[i] != basis_list[i]:
                 raw_key[i] = 'X'
@@ -98,13 +100,11 @@ def main():
         sifted_key = list(map(lambda k: int(k), (filter(lambda k: k != 'X', raw_key))))
         sifted_basis = list(filter(lambda k: k != 'X', basis_list))
 
-        print("Alice waiting for classical")
-        bob_key = list(Alice.recvClassical())
-        Alice.sendClassical("Bob", sifted_key)
-        print('received!')
+        bob_key = list(receive_message(Alice))
+        send_message(Alice, "Bob", bytes(sifted_key))
 
-        print('A BAS = {}'.format(sifted_basis))
-        print('A KEY = {}'.format(sifted_key))
+        # print('A BAS = {}'.format(sifted_basis))
+        print('\nA KEY = {}'.format(sifted_key))
         print('B KEY = {}'.format(bob_key))
 
         z_basis_error = 0.0

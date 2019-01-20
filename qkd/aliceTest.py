@@ -34,6 +34,8 @@ from numpy import matmul
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection, qubit
 import communication
 import authentication as auth
+from error_correction import CascadeSender
+from config import Config
 from progressBar import  print_progress_bar
 
 import argparse
@@ -44,11 +46,13 @@ import utils
 
 
 class Sender(object):
-    def __init__(self, name="Alice", correctness_param=2, security_param=1):
+    def __init__(self, name="Alice"):
         self.cqc = None
         self.name = name
-        self.correctness_param = correctness_param
-        self.security_param = security_param
+        self.config = Config()
+
+        self.correctness_param = self.config.get_correctness_param()
+        self.security_param = self.config.get_security_param()
 
         self.skey = auth.generate_private_key()
         self.pkey = auth.publish_public_key(self.name, self.skey)
@@ -65,15 +69,24 @@ class Sender(object):
 
         self.error_estimation = 0.0
 
-    def send(self, message, receiver='Bob'):
+    def send(self, filename, receiver='Bob'):
         with CQCConnection(self.name) as self.cqc:
             self.cqc.closeClassicalServer()
             self.receiver = receiver
             self.receiver_pkey = auth.get_public_key(receiver)
 
+            f = open(filename, 'rb')
+            message = f.read()
+            f.close()
+
             self.n = len(message)*8
             self.N = math.ceil((4 + self.correctness_param) * self.n) + 25
-            communication.send_message(self.cqc, self.receiver, self.skey, self.n)  # TODO: change to send parameters
+            communication.send_message(self.cqc, self.receiver, self.skey, json.dumps({
+                'n': self.n,
+                'security_param': self.security_param,
+                'correctness_param': self.correctness_param,
+                'filename': filename
+            }))
             self._send_qubits()
             self._perform_basis_sift()
             can_continue = self._perform_error_estimation()
@@ -163,60 +176,15 @@ class Sender(object):
 
     def _perform_error_correction(self):
         if self.error_estimation == 0:
-            return
+            self.error_estimation = 0.01
+            print('Performing error correction with estimate=0.01')
         print('Performing error correction...', end='\r')
-        self._cascade()
+        CascadeSender(self).run_algorithm()
         print('Performing error correction... Done!')
-
-    def _cascade(self):
-        n = math.ceil(0.73/self.error_estimation)
-        iterations = [[]]
-
-        # 1st iteration
-        for i in range(0, len(self.sifted_key), n):
-            iterations[0].append(list(range(i, min(i + n, len(self.sifted_key) - 1))))
-
-        parities = utils.calculate_parities(self.sifted_key, iterations[0])
-        communication.send_binary_list(self.cqc, self.receiver, self.skey, parities)
-        msg = communication.receive_message(self.cqc, self.receiver_pkey)
-        while msg != 'ALL DONE':
-            block_num = int(msg)
-            self._binary(iterations[0][block_num])
-            msg = communication.receive_message(self.cqc, self.receiver_pkey)
-
-        # nth iteration
-        for iter_num in range(1, 4):
-            n = 2 * n
-            iterations.append([])
-            temp_indices = list(range(0, len(self.sifted_key)))
-            random.shuffle(temp_indices)
-            communication.send_message(self.cqc, self.receiver, self.skey, temp_indices)
-            for i in range(0, len(self.sifted_key), n):
-                iterations[iter_num].append(temp_indices[i:min(i + n, len(self.sifted_key) - 1)])
-            parities = utils.calculate_parities(self.sifted_key, iterations[iter_num])
-            communication.send_binary_list(self.cqc, self.receiver, self.skey, parities)
-            msg = communication.receive_message(self.cqc, self.receiver_pkey)
-            while msg != 'ALL DONE':
-                iter_num, block_num = json.loads(msg)
-                self._binary(iterations[iter_num][block_num])
-                msg = communication.receive_message(self.cqc, self.receiver_pkey)
-
-    def _binary(self, block):
-        first_half_size = math.ceil(len(block) / 2.0)
-        first_half_par = utils.calculate_parity(self.sifted_key, block[:first_half_size])
-        communication.send_message(self.cqc, self.receiver, self.skey, first_half_par)
-        msg = communication.receive_message(self.cqc, self.receiver_pkey)
-        if msg != 'DONE':
-            block_part = int(msg)
-            if block_part == 0:
-                self._binary(block[:first_half_size])
-            else:
-                self._binary(block[first_half_size:])
 
     def _perform_privacy_amplification(self):
         seed_col, seed_row = self._generate_seed()
         communication.send_binary_list(self.cqc, self.receiver, self.skey, seed_col + seed_row)
-
         self.final_key = matmul(toeplitz(seed_col, seed_row), self.sifted_key)
 
     def _generate_seed(self):
@@ -252,11 +220,8 @@ def parse_arguments():
 def main():
 
     filename = parse_arguments()
-    f = open(filename, 'rb')
-    text = f.read()
-    f.close()
     alice = Sender()
-    alice.send(text, "Bob")
+    alice.send(filename, "Bob")
 
     """
     basis_list = []

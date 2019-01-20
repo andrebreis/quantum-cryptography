@@ -27,16 +27,20 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import argparse
+import json
 import math
+import os
 import random
 import sys
 
+from config import Config
 from scipy.linalg import toeplitz
 from numpy import matmul
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection
 import communication
 import authentication as auth
+from error_correction import CascadeReceiver
 
 import utils
 
@@ -51,13 +55,14 @@ class Receiver(object):
         # CQCConnection.__init__(self, name)
         self.cqc = None
         self.name = name
-        self.correctness_param = correctness_param
-        self.security_param = security_param
 
         self.skey = auth.generate_private_key()
         self.pkey = auth.publish_public_key(self.name, self.skey)
         self.sender = ''
         self.sender_pkey = ''
+
+        self.correctness_param = 0.0
+        self.security_param = 0.0
 
         self.msg = ''
         self.n = 0
@@ -76,7 +81,12 @@ class Receiver(object):
             self.sender = sender
             self.sender_pkey = auth.get_public_key(sender)
 
-            self.n = int(communication.receive_message(self.cqc, self.sender_pkey))  # TODO: change to receive parameters
+            config = communication.receive_list(self.cqc, self.sender_pkey)
+            self.n = config['n']
+            self.correctness_param = config['correctness_param']
+            self.security_param = config['security_param']
+            filename = os.path.basename(config['filename'])
+
             self.N = math.ceil((4 + self.correctness_param) * self.n) + 25
             self._receive_qubits()
             self._perform_basis_sift()
@@ -89,7 +99,7 @@ class Receiver(object):
             cyphertext = communication.receive_binary_list(self.cqc, self.sender_pkey)
             plaintext = self._decrypt(cyphertext)
             print(plaintext)
-            f = open(self.name, 'wb')
+            f = open(self.name + '-' + filename, 'wb')
             f.write(plaintext)
             f.close()
 
@@ -157,73 +167,13 @@ class Receiver(object):
 
     def _perform_error_correction(self):
         if self.error_estimation == 0:
-            return
-        self._cascade()
-
-    def _cascade(self):
-        n = math.ceil(0.73 / self.error_estimation)
-        iterations = [[]]
-
-        # 1st iteration
-        for i in range(0, len(self.sifted_key), n):
-            iterations[0].append(list(range(i, min(i + n, len(self.sifted_key) - 1))))
-
-        parities = utils.calculate_parities(self.sifted_key, iterations[0])
-        alice_parities = communication.receive_binary_list(self.cqc, self.sender_pkey)
-
-        for i in range(0, len(alice_parities)):
-            if parities[i] != alice_parities[i]:
-                communication.send_message(self.cqc, self.sender, self.skey, i)
-                self._binary(iterations[0][i])
-        communication.send_message(self.cqc, self.sender, self.skey, 'ALL DONE')
-
-        # nth iteration
-        for iter_num in range(1, 4):
-            n = 2 * n
-            iterations.append([])
-            temp_indices = communication.receive_list(self.cqc, self.sender_pkey)
-            for i in range(0, len(self.sifted_key), n):
-                iterations[iter_num].append(temp_indices[i:min(i + n, len(self.sifted_key) - 1)])
-            parities = utils.calculate_parities(self.sifted_key, iterations[iter_num])
-            alice_parities = communication.receive_binary_list(self.cqc, self.sender_pkey)
-            for i in range(0, len(alice_parities)):
-                if parities[i] != alice_parities[i]:
-                    correcting_block = i
-                    for j in range(0, iter_num + 1):
-                        communication.send_message(self.cqc, self.sender, self.skey, [iter_num - j, correcting_block])
-                        corrected_index = self._binary(iterations[iter_num - j][correcting_block])
-                        if iter_num - j - 1 >= 0:
-                            correcting_block = utils.get_num_block_with_index(iterations[iter_num - j - 1], corrected_index)
-            communication.send_message(self.cqc, self.sender, self.skey, 'ALL DONE')
-
-    def _binary(self, block):
-        alice_first_half_par = int(communication.receive_message(self.cqc, self.sender_pkey))
-
-        first_half_size = math.ceil(len(block) / 2.0)
-        first_half_par = utils.calculate_parity(self.sifted_key, block[:first_half_size])
-
-        if first_half_par != alice_first_half_par:
-            if first_half_size == 1:
-                self.sifted_key[block[0]] = (self.sifted_key[block[0]] + 1) % 2
-                communication.send_message(self.cqc, self.sender, self.skey, 'DONE')
-                return block[0]
-            else:
-                communication.send_message(self.cqc, self.sender, self.skey, 0)
-                return self._binary(block[:first_half_size])
-        else:
-            if len(block) - first_half_size == 1:
-                self.sifted_key[block[-1]] = (self.sifted_key[block[-1]] + 1) % 2
-                communication.send_message(self.cqc, self.sender, self.skey, 'DONE')
-                return block[-1]
-            else:
-                communication.send_message(self.cqc, self.sender, self.skey, 1)
-                return self._binary(block[first_half_size:])
+            self.error_estimation = 0.01
+        CascadeReceiver(self).run_algorithm()
 
     def _perform_privacy_amplification(self):
         seed = communication.receive_binary_list(self.cqc, self.sender_pkey)
         seed_col = seed[:self.n]
         seed_row = seed[self.n:]
-
         self.final_key = matmul(toeplitz(seed_col, seed_row), self.sifted_key)
 
     def _decrypt(self, cyphertext):

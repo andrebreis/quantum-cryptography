@@ -71,7 +71,7 @@ def main():
                 # print('eve', i)
                 Eve.sendQubit(q, "Bob")
             except Exception:
-                print('Eve exiting..')
+                #print('Eve exiting..')
                 break
 
                 # print(Eve.release_all_qubits())

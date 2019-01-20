@@ -28,6 +28,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import argparse
 import random
+from communication import send_message, receive_message
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection
 
@@ -69,6 +70,7 @@ def main():
             # Retrieve key bit
             k = q.measure()
             bitstring += str(k)
+            send_message(Bob, 'Alice', 'ok'.encode('UTF-8'))
 
             # Receive classical encoded message from Alice
             # enc = Bob.recvClassical()[0]

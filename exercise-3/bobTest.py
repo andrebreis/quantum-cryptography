@@ -71,6 +71,7 @@ def main():
             # Retrieve key bit
             k = q.measure()
             raw_key.append(str(k))
+            send_message(Bob, 'Alice', 'ok'.encode('utf-8'))
 
         alice_basis = list(receive_message(Bob))
         send_message(Bob, "Alice", bytes(basis_list))

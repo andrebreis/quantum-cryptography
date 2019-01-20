@@ -88,6 +88,7 @@ def main():
 
             # Send qubit to Bob (via Eve)
             Alice.sendQubit(q, "Eve")
+            receive_message(Alice)
 
         send_message(Alice, "Bob", bytes(basis_list))
         bob_basis = list(receive_message(Alice))

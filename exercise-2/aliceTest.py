@@ -29,6 +29,8 @@
 
 from SimulaQron.cqc.pythonLib.cqc import CQCConnection, qubit
 import argparse
+from communication import send_message, receive_message
+
 
 import random
 
@@ -77,9 +79,10 @@ def main():
 
             # Send qubit to Bob (via Eve)
             Alice.sendQubit(q, "Eve")
+            receive_message(Alice)
 
         print("\nAlice basis={}".format(basis_string))
-        print("Alice send the key k={} to Bob".format(bitstring))
+        print("Alice sent the key k={} to Bob".format(bitstring))
 
 
 ##################################################################################################

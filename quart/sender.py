@@ -36,7 +36,7 @@ import communication
 import authentication as auth
 from error_correction import CascadeSender
 from config import Config
-from progressBar import  print_progress_bar
+from progress_bar import  print_progress_bar
 
 import argparse
 
@@ -162,13 +162,12 @@ class Sender(object):
                 num_errors += 1.0
 
         self.error_estimation = num_errors / len(key_part)
-        print('A Performing error estimation... Done!')
-        print('A Error rate = {}'.format(self.error_estimation))
+        print('Performing error estimation... Done!')
+        print('Error rate = {}'.format(self.error_estimation))
 
         error_estimation_indices.sort()
         self.sifted_key = utils.remove_indices(self.sifted_key, error_estimation_indices)
         remaining_bits = len(self.sifted_key)
-        print(remaining_bits)
         min_entropy = remaining_bits * (1 - utils.h(self.error_estimation))
         max_key = min_entropy - 2 * utils.log(1/self.security_param, 2) - 1
 
@@ -222,166 +221,6 @@ def main():
     filename = parse_arguments()
     alice = Sender()
     alice.send(filename, "Bob")
-
-    """
-    basis_list = []
-    raw_key = []
-
-    with CQCConnection("Alice") as Alice:
-        Alice.closeClassicalServer()
-        # msg = auth.sign(skey, str(n))
-        N = math.ceil((4 + CORRECTNESS_PARAMETER) * n)
-        # Alice.sendClassical("Bob", communication.dict_to_binary(msg))
-        print(N)
-
-
-        for i in range(0, N):
-
-            # Generate a key
-            k = random.randint(0, 1)
-            raw_key.append(k)
-            chosen_basis = random.randint(0, 1)
-            basis_list.append(chosen_basis)
-
-            # Create a qubit
-            q = qubit(Alice)
-
-            # Encode the key in the qubit
-            if k == 1:
-                q.X()
-
-            # Encode in H basis if basis = 1
-            if chosen_basis == 1:
-                q.H()
-
-                # Send qubit to Bob (via Eve)
-            # print('sending qubit {}...'.format(str(i)))
-            # try:
-            Alice.sendQubit(q, "Eve")
-            # except Exception:
-            #     time.sleep(0.25)
-            #     Alice.sendQubit(q, "Eve")
-            received_qubit = communication.receive_message(Alice, bob_pkey)
-            print_progress_bar(i, N-1)
-            # print('sent!')
-    # done_receiving = communication.binary_to_dict(Alice.recvClassical())
-    done_receiving = communication.receive_message(Alice, bob_pkey)
-    # auth.verify(bob_pkey, done_receiving)
-    print(done_receiving)
-    assert done_receiving == 'DONE'
-
-    print('BASIS SIFT')
-    communication.send_binary_list(Alice, 'Bob', skey, basis_list)
-    bob_basis = communication.receive_binary_list(Alice, bob_pkey)
-    print(basis_list)
-    print(len(bob_basis))
-
-    diff_basis = []
-    for i in range(0, len(bob_basis)):
-        if bob_basis[i] != basis_list[i]:
-            diff_basis.append(i)
-
-
-    sifted_key = utils.remove_indices(raw_key, diff_basis)
-    sifted_basis = utils.remove_indices(basis_list, diff_basis)
-    print(sifted_key)
-
-    print('ERROR ESTIMATION')
-    error_estimation_indices = []
-    key_part = []
-    for i in range(0, n):
-        r = random.randint(0, len(sifted_key)-1)
-        while r in error_estimation_indices:
-            r = random.randint(0, len(sifted_key)-1)
-        error_estimation_indices.append(r)
-        key_part.append(sifted_key[r])
-        
-    # print(error_estimation_indices)
-    communication.send_message(Alice, 'Bob', skey, error_estimation_indices)
-    communication.send_binary_list(Alice, 'Bob', skey, key_part)
-    bob_key_part = communication.receive_binary_list(Alice, bob_pkey)
-
-
-    num_errors = 0.0
-    for i in range(0, len(key_part)):
-        if bob_key_part[i] != key_part[i]:
-            num_errors += 1.0
-
-    error_estimation = num_errors/len(key_part)
-    print(error_estimation)
-
-    # Pguess(Xr|E) = 2^((-Pwin(Tripartite game)-h(error))*num_bits, Pwin(Tripartite game)=0.23
-    min_entropy = -(-0.23 + utils.h(error_estimation)) * (len(sifted_key) - n)
-
-    if len(sifted_key) - n > min_entropy - 2 * utils.log(SECURITY_PARAMETER, 2) - 1:
-        # print('NOT ENOUGH MIN ENTROPY', len(sifted_key) - n, ' > ', min_entropy - 2 * utils.log(SECURITY_PARAMETER, 2) - 1)
-        sys.exit(0)
-    # print('n={}, r={}, min_entropy={}, min_possible_entropy={}'.format(n, len(sifted_key) - n, min_entropy,
-    #                                                                    min_entropy - 2 * utils.log(SECURITY_PARAMETER,
-    #                                                                                                2) - 1))
-    """
-    """
-    # Initialize the connection
-    with CQCConnection("Alice") as Alice:
-
-
-        
-
-            # Encode and send a classical message m to Bob
-            # m = 1
-            # enc = (m + k) % 2
-            # Alice.sendClassical("Bob", enc)
-
-        # print("\nAlice basis={}".format(basis_string))
-        # print("Alice send the key k={} to Bob".format(bitstring))
-
-        Alice.sendClassical("Bob", basis_list)
-        bob_basis = Alice.recvClassical()
-        bob_basis = list(bob_basis)
-        # print('\n ========================= \n')
-        # print(basis_list)
-        # print(bob_basis)
-
-        # print('\n' + ''.join(sifted_key))
-
-        print("Alice waiting for classical")
-        bob_key = list(Alice.recvClassical())
-        print('received!')
-        # print(len(sifted_key))
-        # print(len(bob_key))
-        print('A BAS = {}'.format(sifted_basis))
-        print('A KEY = {}'.format(sifted_key))
-        print('B KEY = {}'.format(bob_key))
-
-        z_basis_error = 0.0
-        x_basis_error = 0.0
-        z_count = 0.0
-        x_count = 0.0
-        for i in range(0, len(sifted_basis)):
-            if int(sifted_basis[i]) == 0:
-                z_count += 1.0
-                if int(sifted_key[i]) != bob_key[i]:
-                    z_basis_error += 1.0
-            else:
-                x_count += 1.0
-                if int(sifted_key[i]) != bob_key[i]:
-                    x_basis_error += 1.0
-
-        print("\n Standard Basis Error: {}\n Hadamard Basis Error: {}\n".format(z_basis_error / z_count,
-                                                                                x_basis_error / x_count))
-
-        # seed = generate_seed(len(sifted_key))
-        # key = 0
-        # for i in range(0, len(seed)):
-        #     key = (key + (int(sifted_key[i]) * seed[i])) % 2
-        # print(key)
-
-        # Alice.sendClassical("Eve", seed)
-
-        # Alice.sendClassical("Bob", key)
-
-    # print(bob_basis)
-    """
 
 ##################################################################################################
 main()

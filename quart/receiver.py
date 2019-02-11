@@ -104,7 +104,6 @@ class Receiver(object):
             f.close()
 
     def _receive_qubits(self):
-        # print("Receiving {} qubits...".format(self.N))
         for i in range(0, self.N):
 
             # Receive qubit from Alice (via Eve)
@@ -124,7 +123,7 @@ class Receiver(object):
         communication.send_message(self.cqc, self.sender, self.skey, 'DONE')
 
     def _perform_basis_sift(self):
-        print("Performing Basis sift...", end='\r')
+        # print("Performing Basis sift...", end='\r')
 
         receiver_basis = communication.receive_binary_list(self.cqc, self.sender_pkey)
         communication.send_binary_list(self.cqc, self.sender, self.skey, self.basis_list)
@@ -136,10 +135,10 @@ class Receiver(object):
 
         self.sifted_key = utils.remove_indices(self.raw_key, diff_basis)
         self.sifted_basis = utils.remove_indices(self.basis_list, diff_basis)
-        print("Performing Basis sift... Done!")
+        # print("Performing Basis sift... Done!")
 
     def _perform_error_estimation(self):
-        print('Performing error estimation...', end='\r')
+        # print('Performing error estimation...', end='\r')
 
         error_estimation_indices = communication.receive_list(self.cqc, self.sender_pkey)
         sender_key_part = communication.receive_binary_list(self.cqc, self.sender_pkey)
@@ -154,8 +153,8 @@ class Receiver(object):
         communication.send_binary_list(self.cqc, self.sender, self.skey, key_part)
 
         self.error_estimation = num_errors / len(key_part)
-        print('B Performing error estimation... Done!')
-        print('B Error rate = {}'.format(self.error_estimation))
+        # print('B Performing error estimation... Done!')
+        # print('B Error rate = {}'.format(self.error_estimation))
 
         error_estimation_indices.sort()
         self.sifted_key = utils.remove_indices(self.sifted_key, error_estimation_indices)
@@ -183,135 +182,9 @@ class Receiver(object):
         return communication.bitlist_to_bytes(plaintext)
 
 
-"""def main():
-
-    skey = auth.generate_private_key()
-    auth.publish_public_key('Bob', skey)
-    alice_pkey = auth.get_public_key('Alice')
-
-    basis_list = []
-    raw_key = []
-
-    with CQCConnection("Bob") as Bob:
-        # msg = communication.binary_to_dict(Bob.recvClassical())
-        # auth.verify(alice_pkey, msg)
-        msg = communication.receive_message(Bob,alice_pkey)
-        n = int(msg)
-        N = math.ceil((n + CORRECTNESS_PARAMETER)*4)
-        print(N)
-
-        for i in range(0, N):
-
-            # Receive qubit from Alice (via Eve)
-            q = Bob.recvQubit()
-
-            # Choose a random basis
-            chosen_basis = random.randint(0, 1)
-            basis_list.append(chosen_basis)
-            if chosen_basis == 1:
-                q.H()
-
-            # Retrieve key bit
-            k = q.measure()
-            raw_key.append(str(k))
-
-        # Bob.sendClassical('Alice', communication.dict_to_binary(auth.sign(skey, 'DONE')))
-        communication.send_message(Bob, 'Alice', skey, 'DONE')
-        """
-
-
 def main():
     bob = Receiver()
     bob.receive()
-
-    """
-    skey = auth.generate_private_key()
-    auth.publish_public_key('Bob', skey)
-    alice_pkey = auth.get_public_key('Alice')
-
-    basis_list = []
-    raw_key = []
-
-    # Initialize the connection
-    with CQCConnection("Bob") as Bob:
-        Bob.closeClassicalServer()
-
-        msg = communication.receive_message(Bob,alice_pkey)
-        n = int(msg)
-        N = math.ceil((4 + CORRECTNESS_PARAMETER)*n)
-        print(N)
-
-        for i in range(0, N):
-
-            # Receive qubit from Alice (via Eve)
-            q = Bob.recvQubit()
-
-            # Choose a random basis
-            chosen_basis = random.randint(0, 1)
-            basis_list.append(chosen_basis)
-            if chosen_basis == 1:
-                q.H()
-
-            # Retrieve key bit
-            k = q.measure()
-            raw_key.append(k)
-            communication.send_message(Bob, 'Alice', skey, 'ok')
-
-        communication.send_message(Bob, 'Alice', skey, 'DONE')
-
-        alice_basis = communication.receive_binary_list(Bob, alice_pkey)
-        communication.send_binary_list(Bob, 'Alice', skey, basis_list)
-        print('ab', alice_basis)
-        # print(len(alice_basis))
-
-        diff_basis = []
-        for i in range(0, len(alice_basis)):
-            if alice_basis[i] != basis_list[i]:
-                diff_basis.append(i)
-
-
-        sifted_key = utils.remove_indices(raw_key, diff_basis)
-        sifted_basis = utils.remove_indices(basis_list, diff_basis)
-
-
-
-        # Pguess(Xr|E) = 2^((-Pwin(Tripartite game)-h(error))*num_bits, Pwin(Tripartite game)=0.23
-        # min_entropy = -(-0.23 + utils.h(error_estimation)) * (len(sifted_key) - n)
-        min_entropy = (len(sifted_key)-n)*(1-utils.h(error_estimation))
-
-        if n > min_entropy - 2 * utils.log(100, 2) - 1:
-            print('NOT ENOUGH MIN ENTROPY', len(sifted_key) - n, ' > ',
-                  min_entropy - 2 * utils.log(100, 2) - 1)
-            sys.exit(0)
-        print('n={}, r={}, min_entropy={}, min_possible_entropy={}'.format(n, len(sifted_key) - n, min_entropy,
-                                                                           min_entropy - 2 * utils.log(
-                                                                               1.0/SECURITY_PARAMETER,
-                                                                               2) - 1))
-
-        # sifted_key = list(filter(lambda k: k != 'X', raw_key))
-        # print('\n' + ''.join(sifted_key))
-
-        # for i in range(0, len(sifted_key)):
-        #     sifted_key[i] = int(sifted_key[i])
-
-        # time.sleep(1)
-        # print(type(sifted_key))
-
-        # print('bob sending classical...')
-        # Bob.sendClassical("Alice", sifted_key)
-        # print('sent!')
-
-        # seed = list(Bob.recvClassical())
-        # key = 0
-        # for i in range(0, len(seed)):
-        #     key = (key + (int(sifted_key[i]) * seed[i])) % 2
-        # print(key)
-
-
-
-        # print('\n ========================= \n')
-        # print('\n Alice basis={}'.format(alice_basis))
-        """
 
 
 ##################################################################################################

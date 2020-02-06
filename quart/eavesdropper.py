@@ -29,7 +29,7 @@
 import argparse
 import random
 
-from SimulaQron.cqc.pythonLib.cqc import CQCConnection
+from cqc.pythonLib import CQCConnection
 
 
 #####################################################################################################

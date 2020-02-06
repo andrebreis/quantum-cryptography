@@ -58,6 +58,7 @@ class CascadeSender(CascadeAlgorithm):
                 iter_num, block_num = json.loads(msg)
                 self._binary(iterations[iter_num][block_num])
                 msg = communication.receive_message(self.party.cqc, self.party.receiver_pkey)
+        print(self.party.sifted_key)
 
     def _binary(self, block):
         first_half_size = math.ceil(len(block) / 2.0)
@@ -84,13 +85,14 @@ class CascadeReceiver(CascadeAlgorithm):
         for i in range(0, len(self.party.sifted_key), n):
             iterations[0].append(list(range(i, min(i + n, len(self.party.sifted_key) - 1))))
 
-        parities = utils.calculate_parities(self.party.sifted_key, iterations[0])
-        alice_parities = communication.receive_binary_list(self.party.cqc, self.party.sender_pkey)
+        parities = [utils.calculate_parities(self.party.sifted_key, iterations[0])]
+        alice_parities = [communication.receive_binary_list(self.party.cqc, self.party.sender_pkey)]
 
-        for i in range(0, len(alice_parities)):
-            if parities[i] != alice_parities[i]:
+        for i in range(0, len(alice_parities[0])):
+            if parities[0][i] != alice_parities[0][i]:
                 communication.send_message(self.party.cqc, self.party.sender, self.party.skey, i)
                 self._binary(iterations[0][i])
+                parities[0][i] ^= 1
         communication.send_message(self.party.cqc, self.party.sender, self.party.skey, 'ALL DONE')
 
         # nth iteration
@@ -100,17 +102,23 @@ class CascadeReceiver(CascadeAlgorithm):
             temp_indices = communication.receive_list(self.party.cqc, self.party.sender_pkey)
             for i in range(0, len(self.party.sifted_key), n):
                 iterations[iter_num].append(temp_indices[i:min(i + n, len(self.party.sifted_key) - 1)])
-            parities = utils.calculate_parities(self.party.sifted_key, iterations[iter_num])
-            alice_parities = communication.receive_binary_list(self.party.cqc, self.party.sender_pkey)
-            for i in range(0, len(alice_parities)):
-                if parities[i] != alice_parities[i]:
-                    correcting_block = i
-                    for j in range(0, iter_num + 1):
-                        communication.send_message(self.party.cqc, self.party.sender, self.party.skey, [iter_num - j, correcting_block])
-                        corrected_index = self._binary(iterations[iter_num - j][correcting_block])
-                        if iter_num - j - 1 >= 0:
-                            correcting_block = utils.get_num_block_with_index(iterations[iter_num - j - 1], corrected_index)
+            parities.append(utils.calculate_parities(self.party.sifted_key, iterations[iter_num]))
+            alice_parities.append(communication.receive_binary_list(self.party.cqc, self.party.sender_pkey))
+            for i in range(0, len(alice_parities[iter_num])):
+                blocks_to_process = [(iter_num,i)]
+                while blocks_to_process:
+                    (correcting_iter, correcting_block) = blocks_to_process.pop()
+                    if parities[correcting_iter][correcting_block] != alice_parities[correcting_iter][correcting_block]:
+                        communication.send_message(self.party.cqc, self.party.sender, self.party.skey, [correcting_iter, correcting_block])
+                        corrected_index = self._binary(iterations[correcting_iter][correcting_block])
+                        for i in range(0, iter_num):
+                            block_containing_index = utils.get_num_block_with_index(iterations[correcting_iter], corrected_index)
+                            parities[i][block_containing_index] ^= 1
+                            if i != correcting_iter:
+                                blocks_to_process.append((i, block_containing_index))
             communication.send_message(self.party.cqc, self.party.sender, self.party.skey, 'ALL DONE')
+        
+        print(self.party.sifted_key)
 
     def _binary(self, block):
         alice_first_half_par = int(communication.receive_message(self.party.cqc, self.party.sender_pkey))

@@ -37,7 +37,7 @@ from config import Config
 from scipy.linalg import toeplitz
 from numpy import matmul
 
-from SimulaQron.cqc.pythonLib.cqc import CQCConnection
+from cqc.pythonLib import CQCConnection, qubit
 import communication
 import authentication as auth
 from error_correction import CascadeReceiver

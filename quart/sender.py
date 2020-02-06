@@ -31,7 +31,7 @@ import math
 from scipy.linalg import toeplitz
 from numpy import matmul
 
-from SimulaQron.cqc.pythonLib.cqc import CQCConnection, qubit
+from cqc.pythonLib import CQCConnection, qubit
 import communication
 import authentication as auth
 from error_correction import CascadeSender
